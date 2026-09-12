@@ -19,7 +19,7 @@ public interface DiscordLootKeysConfig extends Config
         return 1_000_000;
     }
 
-    @ConfigItem(keyName = "webhookUrl", name = "Discord webhook URL", description = "Screenshots of qualifying Loot Keys and their total value are sent to this Discord webhook. Treat the webhook URL as a secret.", position = 2)
+    @ConfigItem(keyName = "webhookUrl", name = "Discord webhook URL", description = "Screenshots of qualifying Loot Keys and their total value are sent to this Discord webhook. Treat the webhook URL as a secret.", position = 2, secret = true)
     default String webhookUrl()
     {
         return "";
