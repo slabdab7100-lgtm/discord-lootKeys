@@ -1,17 +1,15 @@
-# Loot Key Discord
+# Discord Loot Keys
 
-A RuneLite plugin that detects the Wilderness Loot Key interface, calculates the total Grand Exchange value of the key contents, captures the game canvas, and uploads the screenshot to a Discord webhook when the configured minimum value is reached.
+RuneLite plugin that watches for PvP Loot Keys, calculates their total Grand Exchange value, captures the next game frame, and sends qualifying keys to a configured Discord webhook.
 
 ## Configuration
 
-- **Enable plugin** — turns sending on or off.
-- **Minimum key value** — minimum total GP value required. Set to `0` to send every Loot Key.
-- **Discord webhook** — the Discord webhook used for the upload.
+- **Enable plugin** — enables automatic sending.
+- **Minimum key value** — total GP value required before a screenshot is sent. The default is 1,000,000 GP. Set it to 0 to send every key.
+- **Discord webhook URL** — the Discord webhook that receives qualifying screenshots and the total key value.
 
-## Third-party data disclosure
-
-This plugin communicates with Discord. When a qualifying Loot Key is opened, the plugin sends a screenshot of the RuneLite game canvas and the calculated total key value to the configured Discord webhook. The webhook URL is stored as a secret RuneLite configuration value and is not logged by the plugin.
+The plugin only accepts Discord webhook URLs. Screenshots and the calculated total value are sent to the configured Discord webhook.
 
 ## Valuation
 
-Key value is calculated using RuneLite's current item prices for the items in the PvP Loot Key containers. Items without a positive price contribute zero to the calculated value.
+PvP Loot Keys use RuneLite's four current Deadman loot containers. Each item's current RuneLite price is multiplied by its quantity and summed to determine the threshold value.
