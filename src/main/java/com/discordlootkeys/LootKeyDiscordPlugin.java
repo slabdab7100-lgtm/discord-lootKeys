@@ -1,7 +1,6 @@
 package com.discordlootkeys;
 
 import com.google.inject.Provides;
-import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -16,14 +15,13 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.ItemContainer;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
-import net.runelite.api.gameval.ItemID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.ItemStack;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.DrawManager;
@@ -89,31 +87,31 @@ public class LootKeyDiscordPlugin extends Plugin
 			return;
 		}
 
-		if (!config.enabled() || config.webhookUrl().isBlank())
-		{
-			return;
-		}
-
-		if (keyInterfaceOpen)
+		if (!config.enabled() || config.webhookUrl().isBlank() || keyInterfaceOpen)
 		{
 			return;
 		}
 
 		keyInterfaceOpen = true;
-
 		long totalValue = calculateTotalValue();
-		if (totalValue < Math.max(0, config.minimumValue()))
+		if (totalValue >= Math.max(0, config.minimumValue()))
 		{
-			return;
+			captureAndSend(totalValue);
 		}
+	}
 
-		captureAndSend(totalValue);
+	@Subscribe
+	public void onGameTick(GameTick event)
+	{
+		if (keyInterfaceOpen && client.getWidget(InterfaceID.WILDY_LOOT_CHEST) == null)
+		{
+			keyInterfaceOpen = false;
+		}
 	}
 
 	private long calculateTotalValue()
 	{
 		long total = 0;
-
 		for (int containerId : LOOT_KEY_CONTAINERS)
 		{
 			ItemContainer container = client.getItemContainer(containerId);
@@ -121,19 +119,14 @@ public class LootKeyDiscordPlugin extends Plugin
 			{
 				continue;
 			}
-
 			for (net.runelite.api.Item item : container.getItems())
 			{
-				if (item.getId() < 0 || item.getQuantity() <= 0)
+				if (item.getId() >= 0 && item.getQuantity() > 0)
 				{
-					continue;
+					total += (long) itemManager.getItemPrice(item.getId()) * item.getQuantity();
 				}
-
-				// The Loot Tracker uses ItemManager's current GE price for PvP loot valuation.
-				total += (long) itemManager.getItemPrice(item.getId()) * item.getQuantity();
 			}
 		}
-
 		return total;
 	}
 
@@ -153,19 +146,16 @@ public class LootKeyDiscordPlugin extends Plugin
 		{
 			return;
 		}
-
 		try
 		{
 			byte[] imageBytes = toPng(screenshot);
 			String boundary = "----LootKeyDiscord" + System.nanoTime();
 			String payload = "{\"content\":\"Loot Key: " + formatNumber(totalValue) + " gp\"}";
 			byte[] body = multipartBody(boundary, payload, imageBytes);
-
 			HttpRequest request = HttpRequest.newBuilder(URI.create(webhook))
 				.header("Content-Type", "multipart/form-data; boundary=" + boundary)
 				.POST(HttpRequest.BodyPublishers.ofByteArray(body))
 				.build();
-
 			httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding())
 				.thenAccept(response ->
 				{
