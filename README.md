@@ -12,4 +12,4 @@ The plugin only accepts Discord webhook URLs. Screenshots and the calculated tot
 
 ## Valuation
 
-PvP Loot Keys use RuneLite's four current Deadman loot containers. Each item's current RuneLite price is multiplied by its quantity and summed to determine the threshold value.
+Each item's current RuneLite price is multiplied by its quantity and summed to determine the threshold value.
