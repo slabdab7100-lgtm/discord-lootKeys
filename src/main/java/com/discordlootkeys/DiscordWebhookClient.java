@@ -8,23 +8,41 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import javax.imageio.ImageIO;
 
 public class DiscordWebhookClient
 {
-    private static final String DISCORD_WEBHOOK_PREFIX = "https://discord.com/api/webhooks/";
-    private static final String LEGACY_DISCORD_WEBHOOK_PREFIX = "https://discordapp.com/api/webhooks/";
+    private static final String DISCORD_HOST = "discord.com";
+    private static final String LEGACY_DISCORD_HOST = "discordapp.com";
+    private static final String WEBHOOK_PATH = "/api/webhooks/";
 
     public boolean isValidWebhook(String value)
     {
-        return value.startsWith(DISCORD_WEBHOOK_PREFIX) || value.startsWith(LEGACY_DISCORD_WEBHOOK_PREFIX);
+        try
+        {
+            URI uri = URI.create(value);
+            String host = uri.getHost();
+            String path = uri.getPath();
+            return "https".equalsIgnoreCase(uri.getScheme())
+                && (DISCORD_HOST.equalsIgnoreCase(host) || LEGACY_DISCORD_HOST.equalsIgnoreCase(host))
+                && uri.getPort() == -1
+                && uri.getUserInfo() == null
+                && uri.getFragment() == null
+                && path != null
+                && path.startsWith(WEBHOOK_PATH);
+        }
+        catch (IllegalArgumentException ex)
+        {
+            return false;
+        }
     }
 
     public void send(String webhook, long totalValue, BufferedImage screenshot) throws IOException
     {
         byte[] image = encodePng(screenshot);
         String boundary = "----RuneLiteLootKey" + System.nanoTime();
-        URL url = URI.create(webhook + (webhook.contains("?") ? "&" : "?") + "wait=true").toURL();
+        URL url = URI.create(webhook).toURL();
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);
@@ -38,7 +56,7 @@ public class DiscordWebhookClient
             try (OutputStream out = connection.getOutputStream())
             {
                 writePart(out, boundary, "payload_json", "application/json; charset=UTF-8",
-                    "{\"content\":\"Loot Key value: " + String.format("%,d", totalValue) + " GP\"}");
+                    "{\"content\":\"Loot Key value: " + String.format(Locale.US, "%,d", totalValue) + " GP\"}");
                 writeFile(out, boundary, image);
                 out.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
             }
@@ -58,7 +76,10 @@ public class DiscordWebhookClient
     private static byte[] encodePng(BufferedImage image) throws IOException
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ImageIO.write(image, "png", out);
+        if (!ImageIO.write(image, "png", out))
+        {
+            throw new IOException("No PNG image writer available");
+        }
         return out.toByteArray();
     }
 
